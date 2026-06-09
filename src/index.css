@@ -2279,52 +2279,95 @@ textarea {
   transition: width 0.5s linear;
 }
 
-.tv-players {
+.tv-body {
+  flex: 1;
   display: flex;
-  justify-content: center;
-  gap: clamp(0.5rem, 1.2vw, 0.9rem);
-  flex-wrap: wrap;
-  margin-bottom: clamp(1rem, 2.5vh, 1.75rem);
+  align-items: stretch;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  min-height: 0;
 }
 
-.tv-player {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-  padding: 0.55rem 1rem;
-  background: rgba(255, 255, 255, 0.035);
+.tv-leaderboard {
+  align-self: center;
+  width: clamp(280px, 26vw, 400px);
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  min-width: 92px;
+  border-radius: var(--radius);
+  padding: 0.6rem 0.85rem;
 }
 
-.tv-player-name {
-  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+.tv-lb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.45rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+}
+
+.tv-lb-row:last-child {
+  border-bottom: none;
+}
+
+.tv-lb-head {
+  font-size: 0.68rem;
   font-weight: 700;
-  white-space: nowrap;
-  max-width: 160px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.tv-lb-name {
+  font-weight: 700;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.tv-player-sub {
-  font-size: clamp(0.72rem, 1.3vw, 0.85rem);
-  font-weight: 600;
-  color: var(--gold);
   white-space: nowrap;
 }
 
-.tv-player-out {
-  opacity: 0.45;
+.tv-lb-num {
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.tv-player-out .tv-player-sub {
+.tv-lb-out {
+  opacity: 0.5;
+}
+
+.tv-lb-tag {
+  margin-left: 0.45rem;
+  padding: 0.08rem 0.4rem;
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
+  vertical-align: middle;
 }
 
-.tv-player-busted {
-  color: var(--red) !important;
+.tv-lb-tag-busted {
+  color: var(--red);
+}
+
+@media (max-width: 820px) {
+  .tv-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tv-leaderboard {
+    width: 100%;
+    align-self: auto;
+    max-height: 38vh;
+  }
 }
 
 .tv-bottom {
