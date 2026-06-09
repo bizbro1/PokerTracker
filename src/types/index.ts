@@ -13,6 +13,7 @@ export interface Player {
   buyIns: BuyIn[];
   cashOutChips: number | null;
   currentStackChips: number | null;
+  rebuyRequested: boolean;
   status: PlayerStatus;
 }
 
@@ -47,6 +48,7 @@ export interface BlindPlan {
 export interface PokerSession {
   id: string;
   joinCode: string;
+  hostPin: string | null;
   chipValue: ChipValue;
   defaultBuyInCash: number;
   currency: string;

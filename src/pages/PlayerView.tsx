@@ -25,7 +25,7 @@ import { clearPlayerIdentity, getPlayerIdentity } from '../utils/playerIdentity'
 
 export function PlayerView() {
   const navigate = useNavigate();
-  const { sessions, ready, updatePlayerStack } = useSessions();
+  const { sessions, ready, updatePlayerStack, requestRebuy } = useSessions();
   const [identity, setIdentity] = useState(getPlayerIdentity);
   const [showStackModal, setShowStackModal] = useState(false);
 
@@ -192,11 +192,43 @@ export function PlayerView() {
           </button>
         )}
 
-        {!isPlaying && session.status === 'active' && player.status !== 'playing' && (
+        {session.status === 'active' && (
+          <button
+            type="button"
+            className={`btn btn-block player-self-rebuy-btn ${
+              player.rebuyRequested ? 'btn-ghost' : 'btn-secondary'
+            }`}
+            onClick={() => requestRebuy(session.id, player.id, !player.rebuyRequested)}
+          >
+            {player.rebuyRequested ? 'Cancel Rebuy Request' : 'Request Rebuy'}
+          </button>
+        )}
+
+        {player.rebuyRequested && (
           <p className="form-hint">
-            Want back in? Ask the host to register a rebuy for you.
+            Rebuy requested — the host will see it and hand you chips when you've paid.
           </p>
         )}
+      </Card>
+
+      <Card title="At the Table">
+        <ul className="table-overview">
+          {session.players.map((p) => (
+            <li
+              key={p.id}
+              className={`table-overview-row ${p.id === player.id ? 'table-overview-me' : ''}`}
+            >
+              <span className="table-overview-name">
+                {p.name}
+                {p.id === player.id && <span className="table-overview-you"> (you)</span>}
+              </span>
+              <span className="table-overview-buyins">
+                {p.buyIns.length} buy-in{p.buyIns.length === 1 ? '' : 's'}
+              </span>
+              <StatusBadge status={p.status} />
+            </li>
+          ))}
+        </ul>
       </Card>
 
       {showStackModal && (

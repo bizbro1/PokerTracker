@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import type { PokerSession } from '../types';
 import {
   getPlayerCashInvested,
@@ -76,7 +75,9 @@ export function exportSessionCSV(session: PokerSession): void {
   );
 }
 
-export function exportSessionPDF(session: PokerSession): void {
+export async function exportSessionPDF(session: PokerSession): Promise<void> {
+  // jsPDF is heavy; load it only when someone actually exports
+  const { jsPDF } = await import('jspdf');
   const summary = getSessionSummary(session);
   const doc = new jsPDF();
   let y = 20;

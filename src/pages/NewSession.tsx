@@ -32,6 +32,7 @@ export function NewSession() {
   const [defaultBuyInCash, setDefaultBuyInCash] = useState('100');
   const [currency, setCurrency] = useState('NOK');
   const [notes, setNotes] = useState('');
+  const [hostPin, setHostPin] = useState('');
   const [blindCalcEnabled, setBlindCalcEnabled] = useState(true);
   const [blindConfig, setBlindConfig] = useState<BlindPlanConfig>(DEFAULT_BLIND_CONFIG);
 
@@ -57,6 +58,7 @@ export function NewSession() {
       blindLevels: plan ? blindPlanToSummaryString(plan) : '',
       blindPlan: plan,
       notes: notes.trim(),
+      hostPin: hostPin.trim() || null,
     });
     navigate('/session');
   };
@@ -171,6 +173,22 @@ export function NewSession() {
               placeholder="Location, special rules, etc."
               rows={3}
             />
+          </label>
+
+          <label className="field">
+            <span>Host PIN (optional)</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={hostPin}
+              onChange={(e) => setHostPin(e.target.value)}
+              placeholder="e.g. 1234"
+              maxLength={12}
+              autoComplete="off"
+            />
+            <span className="field-hint">
+              If set, ending the session, removing players, and deleting require this PIN.
+            </span>
           </label>
 
           <p className="form-hint">

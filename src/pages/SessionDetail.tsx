@@ -8,6 +8,7 @@ import { SessionSummaryBar } from '../components/SessionSummaryBar';
 import { useSessions } from '../hooks/useSessions';
 import { getSessionSummary } from '../utils/calculations';
 import { exportSessionCSV, exportSessionPDF } from '../utils/export';
+import { confirmHostPin } from '../utils/hostPin';
 import { formatCurrency } from '../utils/format';
 
 export function SessionDetail() {
@@ -50,6 +51,7 @@ export function SessionDetail() {
           <button
             className="btn btn-danger btn-sm"
             onClick={() => {
+              if (!confirmHostPin(session, 'delete this session')) return;
               if (confirm('Delete this session permanently?')) {
                 deleteSession(session.id);
                 navigate('/history');

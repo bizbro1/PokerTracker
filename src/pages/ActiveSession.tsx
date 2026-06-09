@@ -9,9 +9,11 @@ import { CurrentBlindsBar } from '../components/CurrentBlindsBar';
 import { JoinCodeCard } from '../components/JoinCodeCard';
 import { PlayerTable } from '../components/PlayerTable';
 import { useSessions } from '../hooks/useSessions';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { getSessionSummary } from '../utils/calculations';
 import { exportSessionCSV, exportSessionPDF } from '../utils/export';
 import { formatCurrency } from '../utils/format';
+import { confirmHostPin } from '../utils/hostPin';
 
 export function ActiveSession() {
   const navigate = useNavigate();
@@ -29,6 +31,9 @@ export function ActiveSession() {
   const [playerName, setPlayerName] = useState('');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  // Keep the host screen awake during the live session (blind timer etc.)
+  useWakeLock(!!activeSession);
 
   if (!activeSession) {
     return (
@@ -52,6 +57,7 @@ export function ActiveSession() {
   };
 
   const handleClose = () => {
+    if (!confirmHostPin(activeSession, 'end the session')) return;
     closeSession(activeSession.id);
     navigate(`/session/${activeSession.id}`);
   };
@@ -111,7 +117,11 @@ export function ActiveSession() {
           onUpdateStack={(id, chips) => updatePlayerStack(activeSession.id, id, chips)}
           onCashOut={(id, chips) => cashOutPlayer(activeSession.id, id, chips)}
           onBust={(id) => markBusted(activeSession.id, id)}
-          onRemove={(id) => removePlayer(activeSession.id, id)}
+          onRemove={(id) => {
+            if (confirmHostPin(activeSession, 'remove this player')) {
+              removePlayer(activeSession.id, id);
+            }
+          }}
         />
 
         <form className="add-player-form" onSubmit={handleAddPlayerSubmit}>

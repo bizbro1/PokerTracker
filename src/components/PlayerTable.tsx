@@ -125,7 +125,10 @@ export function PlayerTable({
       return (
         <div key={player.id} className={`player-card ${isPlaying ? '' : 'settled'}`}>
           <div className="player-card-header">
-            <span className="player-name">{player.name}</span>
+            <span className="player-name">
+              {player.name}
+              {player.rebuyRequested && <span className="rebuy-flag">Rebuy?</span>}
+            </span>
             <StatusBadge status={player.status} />
           </div>
           <div className="player-card-stats">
@@ -181,13 +184,26 @@ export function PlayerTable({
               </button>
             </div>
           )}
+          {!readOnly && !isPlaying && player.rebuyRequested && (
+            <div className="player-card-actions">
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => setRebuyPlayerId(player.id)}
+              >
+                + Rebuy
+              </button>
+            </div>
+          )}
         </div>
       );
     }
 
     return (
       <tr key={player.id} className={isPlaying ? '' : 'row-settled'}>
-        <td className="player-name">{player.name}</td>
+        <td className="player-name">
+          {player.name}
+          {player.rebuyRequested && <span className="rebuy-flag">Rebuy?</span>}
+        </td>
         <td>{player.buyIns.length}</td>
         <td>{formatCurrency(invested, session.currency)}</td>
         <td>{formatChips(chipsReceived)}</td>
@@ -226,9 +242,19 @@ export function PlayerTable({
                 </>
               )}
               {player.status !== 'playing' && (
-                <button className="btn btn-sm btn-ghost" onClick={() => onRemove?.(player.id)}>
-                  Remove
-                </button>
+                <>
+                  {player.rebuyRequested && (
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => setRebuyPlayerId(player.id)}
+                    >
+                      + Rebuy
+                    </button>
+                  )}
+                  <button className="btn btn-sm btn-ghost" onClick={() => onRemove?.(player.id)}>
+                    Remove
+                  </button>
+                </>
               )}
             </div>
           </td>

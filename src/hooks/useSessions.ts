@@ -127,6 +127,7 @@ function buildPlayer(name: string, buyInCash: number, chipValue: ChipValue): Pla
     ],
     cashOutChips: null,
     currentStackChips: null,
+    rebuyRequested: false,
     status: 'playing',
   };
 }
@@ -146,10 +147,12 @@ export function useSessions() {
       blindLevels: string;
       blindPlan: BlindPlan | null;
       notes: string;
+      hostPin?: string | null;
     }) => {
       const session: PokerSession = {
         id: generateId(),
         joinCode: generateJoinCode(),
+        hostPin: data.hostPin?.trim() || null,
         chipValue: data.chipValue,
         defaultBuyInCash: data.defaultBuyInCash,
         currency: data.currency,
@@ -183,11 +186,43 @@ export function useSessions() {
       const session = sessions.find((s) => s.id === sessionId);
       if (!session) return null;
       const player = buildPlayer(name, session.defaultBuyInCash, session.chipValue);
-      updateSessionById(sessionId, (s) => ({
-        ...s,
-        players: [...s.players, player],
-      }));
+
+      // Optimistic local add; the server append is atomic so simultaneous
+      // joins from multiple phones can't overwrite each other.
+      upsertLocal({ ...session, players: [...session.players, player] });
+      void supabase
+        .rpc('join_session_player', {
+          p_session_id: sessionId,
+          p_player: player,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Failed to join session:', error.message);
+        });
       return player.id;
+    },
+    []
+  );
+
+  const requestRebuy = useCallback(
+    (sessionId: string, playerId: string, requested: boolean) => {
+      const existing = sessions.find((s) => s.id === sessionId);
+      if (existing) {
+        upsertLocal({
+          ...existing,
+          players: existing.players.map((p) =>
+            p.id === playerId ? { ...p, rebuyRequested: requested } : p
+          ),
+        });
+      }
+      void supabase
+        .rpc('set_player_rebuy', {
+          p_session_id: sessionId,
+          p_player_id: playerId,
+          p_requested: requested,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Failed to set rebuy request:', error.message);
+        });
     },
     []
   );
@@ -223,6 +258,7 @@ export function useSessions() {
                 status: 'playing' as const,
                 cashOutChips: null,
                 currentStackChips: null,
+                rebuyRequested: false,
               }
             : p
         ),
@@ -268,6 +304,7 @@ export function useSessions() {
                 ...p,
                 cashOutChips: remainingChips,
                 currentStackChips: null,
+                rebuyRequested: false,
                 status: remainingChips === 0 ? ('busted' as const) : ('cashed_out' as const),
               }
             : p
@@ -337,6 +374,7 @@ export function useSessions() {
     createSession,
     addPlayer,
     joinAsPlayer,
+    requestRebuy,
     getSessionByJoinCode,
     addBuyIn,
     updatePlayerStack,

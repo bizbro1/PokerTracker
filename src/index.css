@@ -1684,6 +1684,75 @@ textarea {
   margin-top: 1rem;
 }
 
+/* ===== Rebuy requests + table overview ===== */
+
+.rebuy-flag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  background: var(--gold);
+  color: #1a1d21;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  animation: rebuy-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes rebuy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.player-self-rebuy-btn {
+  margin-top: 0.6rem;
+}
+
+.table-overview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.table-overview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.table-overview-me {
+  border-color: var(--gold-dim);
+}
+
+.table-overview-name {
+  flex: 1;
+  font-weight: 600;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.table-overview-you {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.table-overview-buyins {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* ===== Poker hands: rankings + who-wins checker ===== */
 
 .hands-tabs {

@@ -32,12 +32,14 @@ export function migrateSession(raw: LegacySession): PokerSession {
     return {
       ...session,
       joinCode: session.joinCode ?? '',
+      hostPin: session.hostPin ?? null,
       blindPlan: session.blindPlan ?? null,
       blindTimerPausedAt: session.blindTimerPausedAt ?? null,
       blindTimerTotalPausedMs: session.blindTimerTotalPausedMs ?? 0,
       players: session.players.map((p) => ({
         ...p,
         currentStackChips: p.currentStackChips ?? null,
+        rebuyRequested: p.rebuyRequested ?? false,
       })),
     };
   }
@@ -54,6 +56,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
         buyIns: p.buyIns,
         cashOutChips: p.cashOutChips ?? null,
         currentStackChips: player.currentStackChips ?? null,
+        rebuyRequested: player.rebuyRequested ?? false,
         status: p.status,
       };
     }
@@ -79,6 +82,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
       buyIns,
       cashOutChips,
       currentStackChips: null,
+      rebuyRequested: false,
       status: p.status,
     };
   });
@@ -86,6 +90,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
   return {
     id: raw.id,
     joinCode: '',
+    hostPin: null,
     chipValue,
     defaultBuyInCash: raw.defaultBuyInCash ?? chipValue.cash,
     currency: raw.currency,

@@ -108,7 +108,10 @@ function CheckerSection() {
     return keys;
   }, [board, seats]);
 
-  const boardCards = board.filter((c): c is PokerCard => c !== null);
+  const boardCards = useMemo(
+    () => board.filter((c): c is PokerCard => c !== null),
+    [board]
+  );
 
   const results = useMemo(() => {
     const map = new Map<string, HandResult>();
@@ -120,7 +123,7 @@ function CheckerSection() {
       if (result) map.set(seat.id, result);
     }
     return map;
-  }, [seats, board]);
+  }, [seats, boardCards]);
 
   const winners = useMemo(() => {
     let bestScore: number[] | null = null;
