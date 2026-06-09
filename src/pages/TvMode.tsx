@@ -141,17 +141,34 @@ export function TvMode() {
         )}
       </div>
 
+      {session.players.length > 0 && (
+        <div className="tv-players">
+          {session.players.map((p) => (
+            <div
+              key={p.id}
+              className={`tv-player ${p.status !== 'playing' ? 'tv-player-out' : ''}`}
+            >
+              <span className="tv-player-name">{p.name}</span>
+              <span
+                className={`tv-player-sub ${p.status === 'busted' ? 'tv-player-busted' : ''}`}
+              >
+                {p.status === 'playing'
+                  ? p.currentStackChips !== null
+                    ? formatChips(p.currentStackChips)
+                    : `${p.buyIns.length} buy-in${p.buyIns.length === 1 ? '' : 's'}`
+                  : p.status === 'busted'
+                    ? 'Busted'
+                    : 'Cashed out'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="tv-bottom">
         <div className="tv-stat">
           <span className="tv-stat-label">Duration</span>
           <span className="tv-stat-value">{formatDuration(elapsedMs)}</span>
-        </div>
-        <div className="tv-stat">
-          <span className="tv-stat-label">Players</span>
-          <span className="tv-stat-value">
-            {session.players.filter((p) => p.status === 'playing').length}
-            <span className="tv-stat-dim"> / {session.players.length}</span>
-          </span>
         </div>
         {next && (
           <div className="tv-stat">

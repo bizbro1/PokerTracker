@@ -2279,6 +2279,54 @@ textarea {
   transition: width 0.5s linear;
 }
 
+.tv-players {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.5rem, 1.2vw, 0.9rem);
+  flex-wrap: wrap;
+  margin-bottom: clamp(1rem, 2.5vh, 1.75rem);
+}
+
+.tv-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.55rem 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 92px;
+}
+
+.tv-player-name {
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  font-weight: 700;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-player-sub {
+  font-size: clamp(0.72rem, 1.3vw, 0.85rem);
+  font-weight: 600;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.tv-player-out {
+  opacity: 0.45;
+}
+
+.tv-player-out .tv-player-sub {
+  color: var(--text-muted);
+}
+
+.tv-player-busted {
+  color: var(--red) !important;
+}
+
 .tv-bottom {
   display: flex;
   align-items: flex-end;
