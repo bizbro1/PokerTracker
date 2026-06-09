@@ -3,8 +3,10 @@ import { Layout } from './components/Layout';
 import { ActiveSession } from './pages/ActiveSession';
 import { Dashboard } from './pages/Dashboard';
 import { History } from './pages/History';
+import { JoinSession } from './pages/JoinSession';
 import { NewSession } from './pages/NewSession';
 import { PlayerStatsPage } from './pages/PlayerStatsPage';
+import { PlayerView } from './pages/PlayerView';
 import { SessionDetail } from './pages/SessionDetail';
 
 export default function App() {
@@ -18,6 +20,9 @@ export default function App() {
           <Route path="session/:id" element={<SessionDetail />} />
           <Route path="history" element={<History />} />
           <Route path="stats" element={<PlayerStatsPage />} />
+          <Route path="join" element={<JoinSession />} />
+          <Route path="join/:code" element={<JoinSession />} />
+          <Route path="play" element={<PlayerView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -46,6 +46,7 @@ export interface BlindPlan {
 
 export interface PokerSession {
   id: string;
+  joinCode: string;
   chipValue: ChipValue;
   defaultBuyInCash: number;
   currency: string;

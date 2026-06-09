@@ -4,6 +4,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: '♠' },
   { to: '/history', label: 'History', icon: '♦' },
   { to: '/stats', label: 'Stats', icon: '♣' },
+  { to: '/play', label: 'My Game', icon: '♥' },
 ];
 
 export function Layout() {

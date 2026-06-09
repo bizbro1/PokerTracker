@@ -1,34 +1,85 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import { supabase } from '../lib/supabase';
 import type { BlindPlan, ChipValue, Player, PokerSession } from '../types';
 import { cashToChips, generateId } from '../utils/calculations';
+import { generateJoinCode, normalizeJoinCode } from '../utils/joinCode';
 import { migrateSession } from '../utils/migrate';
 
-const STORAGE_KEY = 'poker-tracker-sessions';
-
-function loadSessions(): PokerSession[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown[];
-    return parsed.map((s) => migrateSession(s as Parameters<typeof migrateSession>[0]));
-  } catch {
-    return [];
-  }
-}
-
-function saveSessions(sessions: PokerSession[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-}
-
-let sessions = loadSessions();
+let sessions: PokerSession[] = [];
+let ready = false;
+let initialized = false;
 const listeners = new Set<() => void>();
 
-function emitChange(): void {
-  saveSessions(sessions);
+function emit(): void {
   listeners.forEach((l) => l());
 }
 
+function upsertLocal(session: PokerSession): void {
+  const idx = sessions.findIndex((s) => s.id === session.id);
+  sessions =
+    idx >= 0
+      ? sessions.map((s) => (s.id === session.id ? session : s))
+      : [...sessions, session];
+  emit();
+}
+
+async function fetchAll(): Promise<void> {
+  const { data, error } = await supabase
+    .from('poker_sessions')
+    .select('id, data')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load sessions:', error.message);
+    ready = true;
+    emit();
+    return;
+  }
+
+  sessions = (data ?? []).map((row) =>
+    migrateSession(row.data as Parameters<typeof migrateSession>[0])
+  );
+  ready = true;
+  emit();
+}
+
+function init(): void {
+  if (initialized) return;
+  initialized = true;
+
+  fetchAll();
+
+  supabase
+    .channel('poker-sessions-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'poker_sessions' },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as { id?: string };
+          if (oldRow?.id) {
+            sessions = sessions.filter((s) => s.id !== oldRow.id);
+            emit();
+          }
+          return;
+        }
+        const row = payload.new as { data?: unknown };
+        if (row?.data) {
+          upsertLocal(
+            migrateSession(row.data as Parameters<typeof migrateSession>[0])
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  // Safety net in case realtime is interrupted (phone lock, network drop)
+  window.addEventListener('focus', () => void fetchAll());
+  setInterval(() => void fetchAll(), 15000);
+}
+
 function subscribe(listener: () => void): () => void {
+  init();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -37,8 +88,52 @@ function getSnapshot(): PokerSession[] {
   return sessions;
 }
 
+function getReadySnapshot(): boolean {
+  return ready;
+}
+
+async function pushSession(session: PokerSession): Promise<void> {
+  const { error } = await supabase.from('poker_sessions').upsert({
+    id: session.id,
+    join_code: session.joinCode || null,
+    status: session.status,
+    data: session,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) console.error('Failed to save session:', error.message);
+}
+
+function updateSessionById(
+  id: string,
+  updater: (session: PokerSession) => PokerSession
+): void {
+  const existing = sessions.find((s) => s.id === id);
+  if (!existing) return;
+  const updated = updater(existing);
+  upsertLocal(updated);
+  void pushSession(updated);
+}
+
+function buildPlayer(name: string, buyInCash: number, chipValue: ChipValue): Player {
+  return {
+    id: generateId(),
+    name: name.trim(),
+    buyIns: [
+      {
+        id: generateId(),
+        cashAmount: buyInCash,
+        chips: cashToChips(buyInCash, chipValue),
+      },
+    ],
+    cashOutChips: null,
+    currentStackChips: null,
+    status: 'playing',
+  };
+}
+
 export function useSessions() {
   const allSessions = useSyncExternalStore(subscribe, getSnapshot);
+  const isReady = useSyncExternalStore(subscribe, getReadySnapshot);
 
   const activeSession = allSessions.find((s) => s.status === 'active') ?? null;
 
@@ -54,6 +149,7 @@ export function useSessions() {
     }) => {
       const session: PokerSession = {
         id: generateId(),
+        joinCode: generateJoinCode(),
         chipValue: data.chipValue,
         defaultBuyInCash: data.defaultBuyInCash,
         currency: data.currency,
@@ -68,51 +164,49 @@ export function useSessions() {
         status: 'active',
         createdAt: new Date().toISOString(),
       };
-      sessions = [...sessions.filter((s) => s.status !== 'active'), session];
-      emitChange();
+      upsertLocal(session);
+      void pushSession(session);
       return session;
     },
     []
   );
 
-  const updateSession = useCallback(
-    (id: string, updater: (session: PokerSession) => PokerSession) => {
-      sessions = sessions.map((s) => (s.id === id ? updater(s) : s));
-      emitChange();
+  const addPlayer = useCallback((sessionId: string, name: string, buyInCash: number) => {
+    updateSessionById(sessionId, (s) => ({
+      ...s,
+      players: [...s.players, buildPlayer(name, buyInCash, s.chipValue)],
+    }));
+  }, []);
+
+  const joinAsPlayer = useCallback(
+    (sessionId: string, name: string): string | null => {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (!session) return null;
+      const player = buildPlayer(name, session.defaultBuyInCash, session.chipValue);
+      updateSessionById(sessionId, (s) => ({
+        ...s,
+        players: [...s.players, player],
+      }));
+      return player.id;
     },
     []
   );
 
-  const addPlayer = useCallback(
-    (sessionId: string, name: string, buyInCash: number) => {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) return;
-
-      const player: Player = {
-        id: generateId(),
-        name: name.trim(),
-        buyIns: [
-          {
-            id: generateId(),
-            cashAmount: buyInCash,
-            chips: cashToChips(buyInCash, session.chipValue),
-          },
-        ],
-        cashOutChips: null,
-        currentStackChips: null,
-        status: 'playing',
-      };
-      updateSession(sessionId, (s) => ({
-        ...s,
-        players: [...s.players, player],
-      }));
+  const getSessionByJoinCode = useCallback(
+    (code: string): PokerSession | null => {
+      const normalized = normalizeJoinCode(code);
+      return (
+        allSessions.find(
+          (s) => s.status === 'active' && s.joinCode === normalized
+        ) ?? null
+      );
     },
-    [updateSession]
+    [allSessions]
   );
 
   const addBuyIn = useCallback(
     (sessionId: string, playerId: string, cashAmount: number) => {
-      updateSession(sessionId, (s) => ({
+      updateSessionById(sessionId, (s) => ({
         ...s,
         players: s.players.map((p) =>
           p.id === playerId
@@ -134,26 +228,39 @@ export function useSessions() {
         ),
       }));
     },
-    [updateSession]
+    []
   );
 
   const updatePlayerStack = useCallback(
     (sessionId: string, playerId: string, stackChips: number) => {
-      updateSession(sessionId, (s) => ({
-        ...s,
-        players: s.players.map((p) =>
-          p.id === playerId && p.status === 'playing'
-            ? { ...p, currentStackChips: stackChips }
-            : p
-        ),
-      }));
+      // Optimistic local update, then atomic per-player update on the server
+      const existing = sessions.find((s) => s.id === sessionId);
+      if (existing) {
+        upsertLocal({
+          ...existing,
+          players: existing.players.map((p) =>
+            p.id === playerId && p.status === 'playing'
+              ? { ...p, currentStackChips: stackChips }
+              : p
+          ),
+        });
+      }
+      void supabase
+        .rpc('update_player_stack', {
+          p_session_id: sessionId,
+          p_player_id: playerId,
+          p_stack: stackChips,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Failed to update stack:', error.message);
+        });
     },
-    [updateSession]
+    []
   );
 
   const cashOutPlayer = useCallback(
     (sessionId: string, playerId: string, remainingChips: number) => {
-      updateSession(sessionId, (s) => ({
+      updateSessionById(sessionId, (s) => ({
         ...s,
         players: s.players.map((p) =>
           p.id === playerId
@@ -167,7 +274,7 @@ export function useSessions() {
         ),
       }));
     },
-    [updateSession]
+    []
   );
 
   const markBusted = useCallback(
@@ -177,47 +284,45 @@ export function useSessions() {
     [cashOutPlayer]
   );
 
-  const removePlayer = useCallback(
-    (sessionId: string, playerId: string) => {
-      updateSession(sessionId, (s) => ({
-        ...s,
-        players: s.players.filter((p) => p.id !== playerId),
-      }));
-    },
-    [updateSession]
-  );
+  const removePlayer = useCallback((sessionId: string, playerId: string) => {
+    updateSessionById(sessionId, (s) => ({
+      ...s,
+      players: s.players.filter((p) => p.id !== playerId),
+    }));
+  }, []);
 
-  const toggleBlindTimerPause = useCallback(
-    (sessionId: string) => {
-      updateSession(sessionId, (s) => {
-        if (s.blindTimerPausedAt) {
-          const pauseDuration = Date.now() - new Date(s.blindTimerPausedAt).getTime();
-          return {
-            ...s,
-            blindTimerPausedAt: null,
-            blindTimerTotalPausedMs: s.blindTimerTotalPausedMs + pauseDuration,
-          };
-        }
-        return { ...s, blindTimerPausedAt: new Date().toISOString() };
-      });
-    },
-    [updateSession]
-  );
+  const toggleBlindTimerPause = useCallback((sessionId: string) => {
+    updateSessionById(sessionId, (s) => {
+      if (s.blindTimerPausedAt) {
+        const pauseDuration = Date.now() - new Date(s.blindTimerPausedAt).getTime();
+        return {
+          ...s,
+          blindTimerPausedAt: null,
+          blindTimerTotalPausedMs: s.blindTimerTotalPausedMs + pauseDuration,
+        };
+      }
+      return { ...s, blindTimerPausedAt: new Date().toISOString() };
+    });
+  }, []);
 
-  const closeSession = useCallback(
-    (sessionId: string) => {
-      updateSession(sessionId, (s) => ({
-        ...s,
-        status: 'closed',
-        endTime: new Date().toISOString(),
-      }));
-    },
-    [updateSession]
-  );
+  const closeSession = useCallback((sessionId: string) => {
+    updateSessionById(sessionId, (s) => ({
+      ...s,
+      status: 'closed',
+      endTime: new Date().toISOString(),
+    }));
+  }, []);
 
   const deleteSession = useCallback((sessionId: string) => {
     sessions = sessions.filter((s) => s.id !== sessionId);
-    emitChange();
+    emit();
+    void supabase
+      .from('poker_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .then(({ error }) => {
+        if (error) console.error('Failed to delete session:', error.message);
+      });
   }, []);
 
   const getSession = useCallback(
@@ -227,9 +332,12 @@ export function useSessions() {
 
   return {
     sessions: allSessions,
+    ready: isReady,
     activeSession,
     createSession,
     addPlayer,
+    joinAsPlayer,
+    getSessionByJoinCode,
     addBuyIn,
     updatePlayerStack,
     cashOutPlayer,

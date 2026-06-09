@@ -1549,6 +1549,141 @@ textarea {
 }
 
 
+/* ===== Online play: join flow + player view ===== */
+
+.page-narrow {
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.join-code-content {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.join-code-qr {
+  background: #fff;
+  padding: 0.6rem;
+  border-radius: 10px;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.join-code-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.join-code-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.join-code-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--gold, #d4af37);
+  font-variant-numeric: tabular-nums;
+}
+
+.join-code-url {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.join-code-info .btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.join-code-hint {
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.join-code-input {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.join-session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.join-session-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.player-self-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.player-self-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.player-self-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.player-self-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.player-self-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.player-self-stack-btn {
+  margin-top: 1rem;
+}
+
 .nav-icon {
   font-size: 1rem;
 }

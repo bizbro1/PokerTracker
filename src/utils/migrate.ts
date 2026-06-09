@@ -31,6 +31,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
     const session = raw as PokerSession;
     return {
       ...session,
+      joinCode: session.joinCode ?? '',
       blindPlan: session.blindPlan ?? null,
       blindTimerPausedAt: session.blindTimerPausedAt ?? null,
       blindTimerTotalPausedMs: session.blindTimerTotalPausedMs ?? 0,
@@ -84,6 +85,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
 
   return {
     id: raw.id,
+    joinCode: '',
     chipValue,
     defaultBuyInCash: raw.defaultBuyInCash ?? chipValue.cash,
     currency: raw.currency,

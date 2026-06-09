@@ -6,6 +6,7 @@ import { BuyInModal } from '../components/BuyInModal';
 import { Card } from '../components/Card';
 import { ChipSummaryBar } from '../components/ChipSummaryBar';
 import { CurrentBlindsBar } from '../components/CurrentBlindsBar';
+import { JoinCodeCard } from '../components/JoinCodeCard';
 import { PlayerTable } from '../components/PlayerTable';
 import { useSessions } from '../hooks/useSessions';
 import { getSessionSummary } from '../utils/calculations';
@@ -126,6 +127,8 @@ export function ActiveSession() {
           </button>
         </form>
       </Card>
+
+      <JoinCodeCard joinCode={activeSession.joinCode} />
 
       {activeSession.notes && (
         <Card title="Notes">
