@@ -1,14 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ActivityLog } from '../components/ActivityLog';
 import { BalanceWarning } from '../components/BalanceWarning';
 import { BlindPlanDisplay } from '../components/BlindPlanDisplay';
 import { BuyInModal } from '../components/BuyInModal';
 import { Card } from '../components/Card';
 import { JoinCodeCard } from '../components/JoinCodeCard';
 import { PlayerTable } from '../components/PlayerTable';
+import { SessionEventToast } from '../components/SessionEventToast';
 import { SessionStatStrip } from '../components/SessionStatStrip';
+import { useSessionEventAlerts } from '../hooks/useSessionEventAlerts';
 import { useSessions } from '../hooks/useSessions';
-import { useStackUpdateSound } from '../hooks/useStackUpdateSound';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getSessionSummary } from '../utils/calculations';
 import { exportSessionCSV, exportSessionPDF } from '../utils/export';
@@ -36,7 +38,7 @@ export function ActiveSession() {
 
   // Keep the host screen awake during the live session (blind timer etc.)
   useWakeLock(!!activeSession);
-  useStackUpdateSound(activeSession);
+  const eventToast = useSessionEventAlerts(activeSession);
 
   if (!activeSession) {
     return (
@@ -78,6 +80,7 @@ export function ActiveSession() {
 
   return (
     <div className="page page-wide">
+      <SessionEventToast event={eventToast} />
       <div className="page-header">
         <h1>Live Session</h1>
         {!isHost && (
@@ -149,6 +152,10 @@ export function ActiveSession() {
         </div>
 
         <aside className="session-side">
+          <Card title="Activity">
+            <ActivityLog events={activeSession.events ?? []} limit={30} compact />
+          </Card>
+
           <JoinCodeCard joinCode={activeSession.joinCode} />
 
           {activeSession.blindPlan && (

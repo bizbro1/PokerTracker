@@ -27,37 +27,43 @@ create policy "anon full access" on public.poker_sessions
 create or replace function public.update_player_stack(
   p_session_id uuid,
   p_player_id text,
-  p_stack numeric
+  p_stack numeric,
+  p_event jsonb default null
 ) returns void
 language sql
 as $$
   update public.poker_sessions
   set
     data = jsonb_set(
-      data,
-      '{players}',
-      (
-        select coalesce(
-          jsonb_agg(
-            case
-              when player->>'id' = p_player_id
-                then jsonb_set(
-                  jsonb_set(player, '{currentStackChips}', to_jsonb(p_stack)),
-                  '{stackHistory}',
-                  coalesce(player->'stackHistory', '[]'::jsonb) || jsonb_build_array(
-                    jsonb_build_object(
-                      't', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-                      'chips', p_stack
+      jsonb_set(
+        data,
+        '{players}',
+        (
+          select coalesce(
+            jsonb_agg(
+              case
+                when player->>'id' = p_player_id
+                  then jsonb_set(
+                    jsonb_set(player, '{currentStackChips}', to_jsonb(p_stack)),
+                    '{stackHistory}',
+                    coalesce(player->'stackHistory', '[]'::jsonb) || jsonb_build_array(
+                      jsonb_build_object(
+                        't', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                        'chips', p_stack
+                      )
                     )
                   )
-                )
-              else player
-            end
-          ),
-          '[]'::jsonb
+                else player
+              end
+            ),
+            '[]'::jsonb
+          )
+          from jsonb_array_elements(data->'players') as player
         )
-        from jsonb_array_elements(data->'players') as player
-      )
+      ),
+      '{events}',
+      coalesce(data->'events', '[]'::jsonb)
+        || case when p_event is not null then jsonb_build_array(p_event) else '[]'::jsonb end
     ),
     updated_at = now()
   where id = p_session_id;
@@ -66,16 +72,22 @@ $$;
 -- Atomic player join so two phones joining at once can't overwrite each other
 create or replace function public.join_session_player(
   p_session_id uuid,
-  p_player jsonb
+  p_player jsonb,
+  p_event jsonb default null
 ) returns void
 language sql
 as $$
   update public.poker_sessions
   set
     data = jsonb_set(
-      data,
-      '{players}',
-      coalesce(data->'players', '[]'::jsonb) || jsonb_build_array(p_player)
+      jsonb_set(
+        data,
+        '{players}',
+        coalesce(data->'players', '[]'::jsonb) || jsonb_build_array(p_player)
+      ),
+      '{events}',
+      coalesce(data->'events', '[]'::jsonb)
+        || case when p_event is not null then jsonb_build_array(p_event) else '[]'::jsonb end
     ),
     updated_at = now()
   where id = p_session_id;
@@ -85,28 +97,34 @@ $$;
 create or replace function public.set_player_rebuy(
   p_session_id uuid,
   p_player_id text,
-  p_requested boolean
+  p_requested boolean,
+  p_event jsonb default null
 ) returns void
 language sql
 as $$
   update public.poker_sessions
   set
     data = jsonb_set(
-      data,
-      '{players}',
-      (
-        select coalesce(
-          jsonb_agg(
-            case
-              when player->>'id' = p_player_id
-                then jsonb_set(player, '{rebuyRequested}', to_jsonb(p_requested))
-              else player
-            end
-          ),
-          '[]'::jsonb
+      jsonb_set(
+        data,
+        '{players}',
+        (
+          select coalesce(
+            jsonb_agg(
+              case
+                when player->>'id' = p_player_id
+                  then jsonb_set(player, '{rebuyRequested}', to_jsonb(p_requested))
+                else player
+              end
+            ),
+            '[]'::jsonb
+          )
+          from jsonb_array_elements(data->'players') as player
         )
-        from jsonb_array_elements(data->'players') as player
-      )
+      ),
+      '{events}',
+      coalesce(data->'events', '[]'::jsonb)
+        || case when p_event is not null then jsonb_build_array(p_event) else '[]'::jsonb end
     ),
     updated_at = now()
   where id = p_session_id;

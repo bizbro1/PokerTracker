@@ -12,6 +12,7 @@ import {
   formatProfitLoss,
 } from '../utils/format';
 import { HAND_RANKINGS } from '../utils/pokerHands';
+import { eventIcon, formatEventTime } from '../utils/sessionEvents';
 import { PlayingCard } from './PlayingCard';
 
 export interface LeaderboardRow {
@@ -452,6 +453,31 @@ export function TvHandRankings() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* -------------------------------- Activity feed -------------------------------- */
+
+export function TvActivity({ session }: { session: PokerSession }) {
+  const events = [...(session.events ?? [])].slice(-14).reverse();
+
+  return (
+    <div className="tv-scene-inner">
+      <span className="tv-scene-title">Live Activity</span>
+      {events.length === 0 ? (
+        <p className="tv-scene-empty">Player updates will appear here as the night goes on</p>
+      ) : (
+        <div className="tv-activity">
+          {events.map((event) => (
+            <div key={event.id} className={`tv-activity-row tv-activity-${event.type}`}>
+              <span className="tv-activity-icon">{eventIcon(event.type)}</span>
+              <span className="tv-activity-message">{event.message}</span>
+              <span className="tv-activity-time">{formatEventTime(event.t)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

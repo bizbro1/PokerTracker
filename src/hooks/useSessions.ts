@@ -1,9 +1,13 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { supabase } from '../lib/supabase';
-import type { BlindPlan, ChipValue, Player, PokerSession } from '../types';
+import type { BlindPlan, ChipValue, Player, PokerSession, SessionEvent } from '../types';
 import { cashToChips, generateId } from '../utils/calculations';
+import { formatChips, formatCurrency } from '../utils/format';
 import { generateJoinCode, normalizeJoinCode } from '../utils/joinCode';
 import { migrateSession } from '../utils/migrate';
+import { createSessionEvent } from '../utils/sessionEvents';
+
+const MAX_EVENTS = 100;
 
 let sessions: PokerSession[] = [];
 let ready = false;
@@ -141,6 +145,13 @@ function appendSnapshot(player: Player, chips: number): Player {
   };
 }
 
+function withEvent(session: PokerSession, event: SessionEvent): PokerSession {
+  return {
+    ...session,
+    events: [...(session.events ?? []), event].slice(-MAX_EVENTS),
+  };
+}
+
 export function useSessions() {
   const allSessions = useSyncExternalStore(subscribe, getSnapshot);
   const isReady = useSyncExternalStore(subscribe, getReadySnapshot);
@@ -173,6 +184,7 @@ export function useSessions() {
         blindTimerTotalPausedMs: 0,
         notes: data.notes,
         players: [],
+        events: [],
         status: 'active',
         createdAt: new Date().toISOString(),
       };
@@ -184,10 +196,16 @@ export function useSessions() {
   );
 
   const addPlayer = useCallback((sessionId: string, name: string, buyInCash: number) => {
-    updateSessionById(sessionId, (s) => ({
-      ...s,
-      players: [...s.players, buildPlayer(name, buyInCash, s.chipValue)],
-    }));
+    updateSessionById(sessionId, (s) => {
+      const player = buildPlayer(name, buyInCash, s.chipValue);
+      const event = createSessionEvent(
+        'player_joined',
+        player.id,
+        player.name,
+        `${player.name} joined — ${formatCurrency(buyInCash, s.currency)} buy-in`
+      );
+      return withEvent({ ...s, players: [...s.players, player] }, event);
+    });
   }, []);
 
   const joinAsPlayer = useCallback(
@@ -195,6 +213,12 @@ export function useSessions() {
       const session = sessions.find((s) => s.id === sessionId);
       if (!session) return null;
       const player = buildPlayer(name, session.defaultBuyInCash, session.chipValue);
+      const event = createSessionEvent(
+        'player_joined',
+        player.id,
+        player.name,
+        `${player.name} joined — ${formatCurrency(session.defaultBuyInCash, session.currency)} buy-in`
+      );
 
       // Optimistic local add; the server append is atomic so simultaneous
       // joins from multiple phones can't overwrite each other.
@@ -203,6 +227,7 @@ export function useSessions() {
         .rpc('join_session_player', {
           p_session_id: sessionId,
           p_player: player,
+          p_event: event,
         })
         .then(({ error }) => {
           if (error) console.error('Failed to join session:', error.message);
@@ -215,7 +240,8 @@ export function useSessions() {
   const requestRebuy = useCallback(
     (sessionId: string, playerId: string, requested: boolean) => {
       const existing = sessions.find((s) => s.id === sessionId);
-      if (existing) {
+      const player = existing?.players.find((p) => p.id === playerId);
+      if (existing && player) {
         upsertLocal({
           ...existing,
           players: existing.players.map((p) =>
@@ -223,11 +249,20 @@ export function useSessions() {
           ),
         });
       }
+      const event =
+        player &&
+        createSessionEvent(
+          requested ? 'rebuy_requested' : 'rebuy_cleared',
+          playerId,
+          player.name,
+          requested ? `${player.name} requested a rebuy` : `${player.name} cancelled rebuy request`
+        );
       void supabase
         .rpc('set_player_rebuy', {
           p_session_id: sessionId,
           p_player_id: playerId,
           p_requested: requested,
+          p_event: event ?? null,
         })
         .then(({ error }) => {
           if (error) console.error('Failed to set rebuy request:', error.message);
@@ -250,11 +285,20 @@ export function useSessions() {
 
   const addBuyIn = useCallback(
     (sessionId: string, playerId: string, cashAmount: number) => {
-      updateSessionById(sessionId, (s) => ({
-        ...s,
-        players: s.players.map((p) => {
+      updateSessionById(sessionId, (s) => {
+        let event: SessionEvent | null = null;
+        const players = s.players.map((p) => {
           if (p.id !== playerId) return p;
           const chips = cashToChips(cashAmount, s.chipValue);
+          const isRebuy = p.buyIns.length > 0;
+          event = createSessionEvent(
+            isRebuy ? 'rebuy' : 'buy_in',
+            p.id,
+            p.name,
+            isRebuy
+              ? `${p.name} rebought for ${formatCurrency(cashAmount, s.currency)}`
+              : `${p.name} bought in for ${formatCurrency(cashAmount, s.currency)}`
+          );
           // Estimate the new stack where we can so the progression chart
           // reflects rebuys: busted players restart at the rebuy amount,
           // players with a known stack get it topped up.
@@ -266,10 +310,7 @@ export function useSessions() {
                 : p.cashOutChips;
           const updated: Player = {
             ...p,
-            buyIns: [
-              ...p.buyIns,
-              { id: generateId(), cashAmount, chips },
-            ],
+            buyIns: [...p.buyIns, { id: generateId(), cashAmount, chips }],
             status: 'playing' as const,
             cashOutChips: null,
             currentStackChips: null,
@@ -278,8 +319,9 @@ export function useSessions() {
           return knownStack !== null
             ? appendSnapshot(updated, knownStack + chips)
             : updated;
-        }),
-      }));
+        });
+        return event ? withEvent({ ...s, players }, event) : { ...s, players };
+      });
     },
     []
   );
@@ -288,6 +330,7 @@ export function useSessions() {
     (sessionId: string, playerId: string, stackChips: number) => {
       // Optimistic local update, then atomic per-player update on the server
       const existing = sessions.find((s) => s.id === sessionId);
+      const player = existing?.players.find((p) => p.id === playerId);
       if (existing) {
         upsertLocal({
           ...existing,
@@ -298,11 +341,20 @@ export function useSessions() {
           ),
         });
       }
+      const event =
+        player &&
+        createSessionEvent(
+          'stack_updated',
+          playerId,
+          player.name,
+          `${player.name} updated stack to ${formatChips(stackChips)}`
+        );
       void supabase
         .rpc('update_player_stack', {
           p_session_id: sessionId,
           p_player_id: playerId,
           p_stack: stackChips,
+          p_event: event ?? null,
         })
         .then(({ error }) => {
           if (error) console.error('Failed to update stack:', error.message);
@@ -313,24 +365,39 @@ export function useSessions() {
 
   const cashOutPlayer = useCallback(
     (sessionId: string, playerId: string, remainingChips: number) => {
-      updateSessionById(sessionId, (s) => ({
-        ...s,
-        players: s.players.map((p) =>
-          p.id === playerId
-            ? appendSnapshot(
-                {
-                  ...p,
-                  cashOutChips: remainingChips,
-                  currentStackChips: null,
-                  rebuyRequested: false,
-                  status:
-                    remainingChips === 0 ? ('busted' as const) : ('cashed_out' as const),
-                },
-                remainingChips
-              )
-            : p
-        ),
-      }));
+      updateSessionById(sessionId, (s) => {
+        const player = s.players.find((p) => p.id === playerId);
+        if (!player) return s;
+        const busted = remainingChips === 0;
+        const event = createSessionEvent(
+          busted ? 'busted' : 'cashed_out',
+          playerId,
+          player.name,
+          busted
+            ? `${player.name} busted`
+            : `${player.name} cashed out with ${formatChips(remainingChips)}`
+        );
+        return withEvent(
+          {
+            ...s,
+            players: s.players.map((p) =>
+              p.id === playerId
+                ? appendSnapshot(
+                    {
+                      ...p,
+                      cashOutChips: remainingChips,
+                      currentStackChips: null,
+                      rebuyRequested: false,
+                      status: busted ? ('busted' as const) : ('cashed_out' as const),
+                    },
+                    remainingChips
+                  )
+                : p
+            ),
+          },
+          event
+        );
+      });
     },
     []
   );
@@ -343,10 +410,20 @@ export function useSessions() {
   );
 
   const removePlayer = useCallback((sessionId: string, playerId: string) => {
-    updateSessionById(sessionId, (s) => ({
-      ...s,
-      players: s.players.filter((p) => p.id !== playerId),
-    }));
+    updateSessionById(sessionId, (s) => {
+      const player = s.players.find((p) => p.id === playerId);
+      if (!player) return s;
+      const event = createSessionEvent(
+        'player_removed',
+        playerId,
+        player.name,
+        `${player.name} was removed from the session`
+      );
+      return withEvent(
+        { ...s, players: s.players.filter((p) => p.id !== playerId) },
+        event
+      );
+    });
   }, []);
 
   const toggleBlindTimerPause = useCallback((sessionId: string) => {

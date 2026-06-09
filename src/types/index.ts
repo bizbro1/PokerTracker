@@ -1,6 +1,27 @@
 export type PlayerStatus = 'playing' | 'busted' | 'cashed_out';
 export type SessionStatus = 'active' | 'closed';
 
+export type SessionEventType =
+  | 'player_joined'
+  | 'buy_in'
+  | 'rebuy'
+  | 'stack_updated'
+  | 'rebuy_requested'
+  | 'rebuy_cleared'
+  | 'busted'
+  | 'cashed_out'
+  | 'player_removed';
+
+export interface SessionEvent {
+  id: string;
+  /** ISO timestamp */
+  t: string;
+  type: SessionEventType;
+  playerId: string;
+  playerName: string;
+  message: string;
+}
+
 export interface BuyIn {
   id: string;
   cashAmount: number;
@@ -67,6 +88,7 @@ export interface PokerSession {
   blindTimerTotalPausedMs: number;
   notes: string;
   players: Player[];
+  events: SessionEvent[];
   status: SessionStatus;
   createdAt: string;
 }

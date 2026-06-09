@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSessions } from '../hooks/useSessions';
-import { useStackUpdateSound } from '../hooks/useStackUpdateSound';
+import { SessionEventToast } from '../components/SessionEventToast';
+import { useSessionEventAlerts } from '../hooks/useSessionEventAlerts';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getCurrentBlindLevel, getLevelStartMinutes } from '../utils/blindStructure';
 import { getEffectiveBlindElapsedMs, isBlindTimerPaused } from '../utils/blindTimer';
@@ -17,6 +18,7 @@ import { isHostDevice } from '../utils/hostDevice';
 import { playBlindLevelUpSound } from '../utils/sound';
 import {
   buildLeaderboard,
+  TvActivity,
   TvChipRace,
   TvHandRankings,
   TvJoin,
@@ -32,6 +34,7 @@ type TvSceneId =
   | 'progression'
   | 'pl'
   | 'stats'
+  | 'activity'
   | 'schedule'
   | 'join'
   | 'hands';
@@ -46,6 +49,7 @@ function getScenes(session: PokerSession | null): TvSceneId[] {
   if (hasPlayers) scenes.push('chiprace');
   if (session.players.some((p) => p.stackHistory.length >= 2)) scenes.push('progression');
   if (hasPlayers) scenes.push('pl', 'stats');
+  if ((session.events ?? []).length > 0) scenes.push('activity');
   if (session.blindPlan) scenes.push('schedule');
   if (session.joinCode) scenes.push('join');
   scenes.push('hands');
@@ -69,7 +73,7 @@ export function TvMode() {
   const [sceneIdx, setSceneIdx] = useState(0);
 
   useWakeLock(true);
-  useStackUpdateSound(activeSession);
+  const eventToast = useSessionEventAlerts(activeSession);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 500);
@@ -159,6 +163,7 @@ export function TvMode() {
 
   return (
     <div className={`tv ${paused ? 'tv-paused' : ''}`}>
+      <SessionEventToast event={eventToast} className="event-toast-tv" />
       <div className="tv-top">
         <Link to="/session" className="tv-brand">
           ♠ Poker Night
@@ -221,6 +226,7 @@ export function TvMode() {
               {scene === 'progression' && <TvProgression session={session} />}
               {scene === 'pl' && <TvPLBoard session={session} />}
               {scene === 'stats' && <TvStats session={session} />}
+              {scene === 'activity' && <TvActivity session={session} />}
               {scene === 'schedule' && <TvSchedule session={session} elapsedMs={elapsedMs} />}
               {scene === 'join' && <TvJoin session={session} />}
               {scene === 'hands' && <TvHandRankings />}

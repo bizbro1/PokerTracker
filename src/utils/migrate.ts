@@ -36,6 +36,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
       blindPlan: session.blindPlan ?? null,
       blindTimerPausedAt: session.blindTimerPausedAt ?? null,
       blindTimerTotalPausedMs: session.blindTimerTotalPausedMs ?? 0,
+      events: session.events ?? [],
       players: session.players.map((p) => ({
         ...p,
         currentStackChips: p.currentStackChips ?? null,
@@ -105,6 +106,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
     blindTimerTotalPausedMs: 0,
     notes: raw.notes,
     players,
+    events: [],
     status: raw.status,
     createdAt: raw.createdAt,
   };
