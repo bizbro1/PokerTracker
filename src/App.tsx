@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ActiveSession } from './pages/ActiveSession';
 import { Dashboard } from './pages/Dashboard';
+import { HandsPage } from './pages/HandsPage';
 import { History } from './pages/History';
 import { JoinSession } from './pages/JoinSession';
 import { NewSession } from './pages/NewSession';
@@ -23,6 +24,8 @@ export default function App() {
           <Route path="join" element={<JoinSession />} />
           <Route path="join/:code" element={<JoinSession />} />
           <Route path="play" element={<PlayerView />} />
+          <Route path="hands" element={<HandsPage tab="rankings" />} />
+          <Route path="hands/checker" element={<HandsPage tab="checker" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
