@@ -187,35 +187,36 @@ export function TvMode() {
 
         {session.players.length > 0 && (
           <aside className="tv-leaderboard">
-            <div className="tv-lb-row tv-lb-head">
-              <span>Player</span>
-              <span className="tv-lb-num">Chips</span>
-              <span className="tv-lb-num">P/L</span>
-            </div>
-            {buildLeaderboard(session).map(({ player, chips, profit }) => (
-              <div
-                key={player.id}
-                className={`tv-lb-row ${player.status !== 'playing' ? 'tv-lb-out' : ''}`}
-              >
-                <span className="tv-lb-name">
-                  {player.name}
-                  {player.status === 'busted' && (
-                    <span className="tv-lb-tag tv-lb-tag-busted">out</span>
-                  )}
-                  {player.status === 'cashed_out' && <span className="tv-lb-tag">done</span>}
-                </span>
-                <span className="tv-lb-num">
-                  {chips !== null ? formatChips(chips) : '—'}
-                </span>
-                <span
-                  className={`tv-lb-num ${
-                    profit === null ? '' : profit > 0 ? 'profit' : profit < 0 ? 'loss' : ''
-                  }`}
+            <span className="tv-lb-title">Leaderboard</span>
+            <div className="tv-lb-list">
+              {buildLeaderboard(session).map(({ player, chips, profit }, i) => (
+                <div
+                  key={player.id}
+                  className={`tv-lb-row ${player.status !== 'playing' ? 'tv-lb-out' : ''}`}
                 >
-                  {profit !== null ? formatProfitLoss(profit, session.currency) : '—'}
-                </span>
-              </div>
-            ))}
+                  <span className="tv-lb-rank">{i + 1}</span>
+                  <span className="tv-lb-name">{player.name}</span>
+                  <span className="tv-lb-figures">
+                    <span
+                      className={`tv-lb-chips ${player.status === 'busted' ? 'tv-lb-busted' : ''}`}
+                    >
+                      {player.status === 'busted'
+                        ? 'Busted'
+                        : chips !== null
+                          ? formatChips(chips)
+                          : '—'}
+                    </span>
+                    <span
+                      className={`tv-lb-pl ${
+                        profit === null ? '' : profit > 0 ? 'profit' : profit < 0 ? 'loss' : ''
+                      }`}
+                    >
+                      {profit !== null ? formatProfitLoss(profit, session.currency) : ''}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </aside>
         )}
       </div>
