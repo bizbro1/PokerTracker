@@ -4,12 +4,8 @@ import { useSessions } from '../hooks/useSessions';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getCurrentBlindLevel, getLevelStartMinutes } from '../utils/blindStructure';
 import { getEffectiveBlindElapsedMs, isBlindTimerPaused } from '../utils/blindTimer';
-import {
-  getPlayerLiveProfitCash,
-  getPlayerProfitCash,
-  getTotalPotCash,
-} from '../utils/calculations';
-import type { Player, PokerSession } from '../types';
+import { getTotalPotCash } from '../utils/calculations';
+import type { PokerSession } from '../types';
 import {
   formatChips,
   formatCurrency,
@@ -18,38 +14,41 @@ import {
 } from '../utils/format';
 import { isHostDevice } from '../utils/hostDevice';
 import { playBlindLevelUpSound } from '../utils/sound';
+import {
+  buildLeaderboard,
+  TvChipRace,
+  TvHandRankings,
+  TvJoin,
+  TvPLBoard,
+  TvProgression,
+  TvSchedule,
+  TvStats,
+} from '../components/TvScenes';
 
-interface LeaderboardRow {
-  player: Player;
-  chips: number | null;
-  profit: number | null;
-}
+type TvSceneId =
+  | 'clock'
+  | 'chiprace'
+  | 'progression'
+  | 'pl'
+  | 'stats'
+  | 'schedule'
+  | 'join'
+  | 'hands';
 
-function buildLeaderboard(session: PokerSession): LeaderboardRow[] {
-  const rows: LeaderboardRow[] = session.players.map((player) => {
-    if (player.status === 'playing') {
-      return {
-        player,
-        chips: player.currentStackChips,
-        profit: getPlayerLiveProfitCash(player, session.chipValue),
-      };
-    }
-    return {
-      player,
-      chips: player.cashOutChips,
-      profit: getPlayerProfitCash(player, session.chipValue),
-    };
-  });
+const SCENE_INTERVAL_MS = 2 * 60 * 1000;
+const CLOCK_SNAP_BACK_MS = 60 * 1000;
 
-  // Playing players with known stacks first (by stack), then playing without
-  // a count, then settled players (by their final chips)
-  const rank = (row: LeaderboardRow) => {
-    if (row.player.status === 'playing') return row.chips !== null ? 0 : 1;
-    return 2;
-  };
-  return rows.sort(
-    (a, b) => rank(a) - rank(b) || (b.chips ?? 0) - (a.chips ?? 0)
-  );
+function getScenes(session: PokerSession | null): TvSceneId[] {
+  if (!session) return ['clock'];
+  const scenes: TvSceneId[] = ['clock'];
+  const hasPlayers = session.players.length > 0;
+  if (hasPlayers) scenes.push('chiprace');
+  if (session.players.some((p) => p.stackHistory.length >= 2)) scenes.push('progression');
+  if (hasPlayers) scenes.push('pl', 'stats');
+  if (session.blindPlan) scenes.push('schedule');
+  if (session.joinCode) scenes.push('join');
+  scenes.push('hands');
+  return scenes;
 }
 
 function formatClock(ms: number): string {
@@ -66,6 +65,7 @@ export function TvMode() {
   const { activeSession, toggleBlindTimerPause } = useSessions();
   const prevLevelRef = useRef<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [sceneIdx, setSceneIdx] = useState(0);
 
   useWakeLock(true);
 
@@ -85,6 +85,16 @@ export function TvMode() {
 
   // `now` drives the re-render tick; elapsedMs above recomputes from it
   void now;
+
+  const scenes = getScenes(session);
+  const sceneCount = scenes.length;
+
+  // Auto-advance; depends on sceneIdx so a manual change restarts the 2 min timer
+  useEffect(() => {
+    if (sceneCount <= 1) return;
+    const id = setInterval(() => setSceneIdx((i) => i + 1), SCENE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [sceneCount, sceneIdx]);
 
   useEffect(() => {
     if (!plan || paused || session?.status !== 'active') return;
@@ -127,6 +137,16 @@ export function TvMode() {
     }
   }
 
+  // Always snap back to the clock when a level change is imminent
+  const forceClock =
+    !paused && remainingMs !== null && remainingMs <= CLOCK_SNAP_BACK_MS;
+  const activeIdx = sceneIdx % sceneCount;
+  const scene: TvSceneId = forceClock ? 'clock' : scenes[activeIdx];
+
+  const advanceScene = () => {
+    if (sceneCount > 1) setSceneIdx((i) => i + 1);
+  };
+
   const handleFullscreen = () => {
     if (document.fullscreenElement) {
       void document.exitFullscreen();
@@ -154,37 +174,70 @@ export function TvMode() {
 
       <div className="tv-body">
         <div className="tv-main">
-          <div className="tv-center">
-          {current ? (
-            <>
-              <span className="tv-level-tag">
-                Level {current.level}
-                {plan && <span className="tv-level-total"> / {plan.numLevels}</span>}
-              </span>
-              <div className="tv-blinds">
-                {formatChips(current.smallBlind)}
-                <span className="tv-blinds-sep">/</span>
-                {formatChips(current.bigBlind)}
-              </div>
-              {remainingMs !== null ? (
-                <div className="tv-clock">{paused ? 'PAUSED' : formatClock(remainingMs)}</div>
+          {scene === 'clock' ? (
+            <div className="tv-center" onClick={advanceScene}>
+              {current ? (
+                <>
+                  <span className="tv-level-tag">
+                    Level {current.level}
+                    {plan && <span className="tv-level-total"> / {plan.numLevels}</span>}
+                  </span>
+                  <div className="tv-blinds">
+                    {formatChips(current.smallBlind)}
+                    <span className="tv-blinds-sep">/</span>
+                    {formatChips(current.bigBlind)}
+                  </div>
+                  {remainingMs !== null ? (
+                    <div className="tv-clock">
+                      {paused ? 'PAUSED' : formatClock(remainingMs)}
+                    </div>
+                  ) : (
+                    <div className="tv-clock tv-clock-final">
+                      {paused ? 'PAUSED' : 'FINAL LEVEL'}
+                    </div>
+                  )}
+                  <div className="tv-progress">
+                    <div
+                      className="tv-progress-fill"
+                      style={{ width: `${progress * 100}%` }}
+                    />
+                  </div>
+                </>
               ) : (
-                <div className="tv-clock tv-clock-final">
-                  {paused ? 'PAUSED' : 'FINAL LEVEL'}
-                </div>
+                <>
+                  <span className="tv-level-tag">Cash Game</span>
+                  <div className="tv-blinds">
+                    {formatCurrency(totalPot, session.currency)}
+                  </div>
+                  <div className="tv-clock">{formatDuration(elapsedMs)}</div>
+                </>
               )}
-              <div className="tv-progress">
-                <div className="tv-progress-fill" style={{ width: `${progress * 100}%` }} />
-              </div>
-            </>
+            </div>
           ) : (
-            <>
-              <span className="tv-level-tag">Cash Game</span>
-              <div className="tv-blinds">{formatCurrency(totalPot, session.currency)}</div>
-              <div className="tv-clock">{formatDuration(elapsedMs)}</div>
-            </>
+            <div className="tv-scene" key={scene} onClick={advanceScene}>
+              {scene === 'chiprace' && <TvChipRace session={session} />}
+              {scene === 'progression' && <TvProgression session={session} />}
+              {scene === 'pl' && <TvPLBoard session={session} />}
+              {scene === 'stats' && <TvStats session={session} />}
+              {scene === 'schedule' && <TvSchedule session={session} elapsedMs={elapsedMs} />}
+              {scene === 'join' && <TvJoin session={session} />}
+              {scene === 'hands' && <TvHandRankings />}
+            </div>
           )}
-          </div>
+
+          {sceneCount > 1 && (
+            <div className="tv-dots">
+              {scenes.map((s, i) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`tv-dot ${i === activeIdx && !forceClock ? 'tv-dot-active' : ''}`}
+                  onClick={() => setSceneIdx(i)}
+                  aria-label={`Scene: ${s}`}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="tv-bottom">
             <div className="tv-stat">
@@ -217,7 +270,7 @@ export function TvMode() {
           </div>
         </div>
 
-        {session.players.length > 0 && (
+        {scene === 'clock' && session.players.length > 0 && (
           <aside className="tv-leaderboard">
             <span className="tv-lb-title">Leaderboard</span>
             <div className="tv-lb-list">

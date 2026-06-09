@@ -7,12 +7,19 @@ export interface BuyIn {
   chips: number;
 }
 
+export interface StackSnapshot {
+  /** ISO timestamp */
+  t: string;
+  chips: number;
+}
+
 export interface Player {
   id: string;
   name: string;
   buyIns: BuyIn[];
   cashOutChips: number | null;
   currentStackChips: number | null;
+  stackHistory: StackSnapshot[];
   rebuyRequested: boolean;
   status: PlayerStatus;
 }

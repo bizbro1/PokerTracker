@@ -115,6 +115,7 @@ function updateSessionById(
 }
 
 function buildPlayer(name: string, buyInCash: number, chipValue: ChipValue): Player {
+  const chips = cashToChips(buyInCash, chipValue);
   return {
     id: generateId(),
     name: name.trim(),
@@ -122,13 +123,21 @@ function buildPlayer(name: string, buyInCash: number, chipValue: ChipValue): Pla
       {
         id: generateId(),
         cashAmount: buyInCash,
-        chips: cashToChips(buyInCash, chipValue),
+        chips,
       },
     ],
     cashOutChips: null,
     currentStackChips: null,
+    stackHistory: [{ t: new Date().toISOString(), chips }],
     rebuyRequested: false,
     status: 'playing',
+  };
+}
+
+function appendSnapshot(player: Player, chips: number): Player {
+  return {
+    ...player,
+    stackHistory: [...player.stackHistory, { t: new Date().toISOString(), chips }],
   };
 }
 
@@ -243,25 +252,33 @@ export function useSessions() {
     (sessionId: string, playerId: string, cashAmount: number) => {
       updateSessionById(sessionId, (s) => ({
         ...s,
-        players: s.players.map((p) =>
-          p.id === playerId
-            ? {
-                ...p,
-                buyIns: [
-                  ...p.buyIns,
-                  {
-                    id: generateId(),
-                    cashAmount,
-                    chips: cashToChips(cashAmount, s.chipValue),
-                  },
-                ],
-                status: 'playing' as const,
-                cashOutChips: null,
-                currentStackChips: null,
-                rebuyRequested: false,
-              }
-            : p
-        ),
+        players: s.players.map((p) => {
+          if (p.id !== playerId) return p;
+          const chips = cashToChips(cashAmount, s.chipValue);
+          // Estimate the new stack where we can so the progression chart
+          // reflects rebuys: busted players restart at the rebuy amount,
+          // players with a known stack get it topped up.
+          const knownStack =
+            p.status === 'busted'
+              ? 0
+              : p.status === 'playing'
+                ? p.currentStackChips
+                : p.cashOutChips;
+          const updated: Player = {
+            ...p,
+            buyIns: [
+              ...p.buyIns,
+              { id: generateId(), cashAmount, chips },
+            ],
+            status: 'playing' as const,
+            cashOutChips: null,
+            currentStackChips: null,
+            rebuyRequested: false,
+          };
+          return knownStack !== null
+            ? appendSnapshot(updated, knownStack + chips)
+            : updated;
+        }),
       }));
     },
     []
@@ -276,7 +293,7 @@ export function useSessions() {
           ...existing,
           players: existing.players.map((p) =>
             p.id === playerId && p.status === 'playing'
-              ? { ...p, currentStackChips: stackChips }
+              ? appendSnapshot({ ...p, currentStackChips: stackChips }, stackChips)
               : p
           ),
         });
@@ -300,13 +317,17 @@ export function useSessions() {
         ...s,
         players: s.players.map((p) =>
           p.id === playerId
-            ? {
-                ...p,
-                cashOutChips: remainingChips,
-                currentStackChips: null,
-                rebuyRequested: false,
-                status: remainingChips === 0 ? ('busted' as const) : ('cashed_out' as const),
-              }
+            ? appendSnapshot(
+                {
+                  ...p,
+                  cashOutChips: remainingChips,
+                  currentStackChips: null,
+                  rebuyRequested: false,
+                  status:
+                    remainingChips === 0 ? ('busted' as const) : ('cashed_out' as const),
+                },
+                remainingChips
+              )
             : p
         ),
       }));

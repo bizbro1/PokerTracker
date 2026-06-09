@@ -22,7 +22,8 @@ drop policy if exists "anon full access" on public.poker_sessions;
 create policy "anon full access" on public.poker_sessions
   for all to anon using (true) with check (true);
 
--- Atomic per-player stack update so phones can't overwrite each other's data
+-- Atomic per-player stack update so phones can't overwrite each other's data.
+-- Also appends a snapshot to the player's stackHistory for the progression chart.
 create or replace function public.update_player_stack(
   p_session_id uuid,
   p_player_id text,
@@ -40,7 +41,16 @@ as $$
           jsonb_agg(
             case
               when player->>'id' = p_player_id
-                then jsonb_set(player, '{currentStackChips}', to_jsonb(p_stack))
+                then jsonb_set(
+                  jsonb_set(player, '{currentStackChips}', to_jsonb(p_stack)),
+                  '{stackHistory}',
+                  coalesce(player->'stackHistory', '[]'::jsonb) || jsonb_build_array(
+                    jsonb_build_object(
+                      't', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                      'chips', p_stack
+                    )
+                  )
+                )
               else player
             end
           ),

@@ -39,6 +39,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
       players: session.players.map((p) => ({
         ...p,
         currentStackChips: p.currentStackChips ?? null,
+        stackHistory: p.stackHistory ?? [],
         rebuyRequested: p.rebuyRequested ?? false,
       })),
     };
@@ -56,6 +57,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
         buyIns: p.buyIns,
         cashOutChips: p.cashOutChips ?? null,
         currentStackChips: player.currentStackChips ?? null,
+        stackHistory: player.stackHistory ?? [],
         rebuyRequested: player.rebuyRequested ?? false,
         status: p.status,
       };
@@ -82,6 +84,7 @@ export function migrateSession(raw: LegacySession): PokerSession {
       buyIns,
       cashOutChips,
       currentStackChips: null,
+      stackHistory: [],
       rebuyRequested: false,
       status: p.status,
     };
