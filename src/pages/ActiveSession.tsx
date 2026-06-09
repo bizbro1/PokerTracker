@@ -4,10 +4,9 @@ import { BalanceWarning } from '../components/BalanceWarning';
 import { BlindPlanDisplay } from '../components/BlindPlanDisplay';
 import { BuyInModal } from '../components/BuyInModal';
 import { Card } from '../components/Card';
-import { ChipSummaryBar } from '../components/ChipSummaryBar';
-import { CurrentBlindsBar } from '../components/CurrentBlindsBar';
 import { JoinCodeCard } from '../components/JoinCodeCard';
 import { PlayerTable } from '../components/PlayerTable';
+import { SessionStatStrip } from '../components/SessionStatStrip';
 import { useSessions } from '../hooks/useSessions';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getSessionSummary } from '../utils/calculations';
@@ -63,110 +62,117 @@ export function ActiveSession() {
   };
 
   return (
-    <div className="page">
+    <div className="page page-wide">
       <div className="page-header">
         <h1>Live Session</h1>
-        <div className="page-actions">
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => exportSessionCSV(activeSession)}
-          >
-            Export CSV
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => exportSessionPDF(activeSession)}
-          >
-            Export PDF
-          </button>
-        </div>
       </div>
 
-      <CurrentBlindsBar
+      <SessionStatStrip
         session={activeSession}
         onTogglePause={() => toggleBlindTimerPause(activeSession.id)}
+        showAccounting
       />
-      <ChipSummaryBar session={activeSession} />
       <BalanceWarning session={activeSession} />
 
-      {(summary.biggestWinner || summary.biggestLoser) && (
-        <div className="results-highlight">
-          {summary.biggestWinner && (
-            <span className="profit">
-              Top: {summary.biggestWinner.name} (
-              {formatCurrency(summary.biggestWinner.profit, activeSession.currency)})
-            </span>
-          )}
-          {summary.biggestLoser && (
-            <span className="loss">
-              Bottom: {summary.biggestLoser.name} (
-              {formatCurrency(summary.biggestLoser.loss, activeSession.currency)})
-            </span>
-          )}
-        </div>
-      )}
-
-      {activeSession.blindPlan && (
-        <BlindPlanDisplay blindPlan={activeSession.blindPlan} collapsible />
-      )}
-
-      <Card title="Players">
-        <PlayerTable
-          session={activeSession}
-          onAddBuyIn={(id, cash) => addBuyIn(activeSession.id, id, cash)}
-          onUpdateStack={(id, chips) => updatePlayerStack(activeSession.id, id, chips)}
-          onCashOut={(id, chips) => cashOutPlayer(activeSession.id, id, chips)}
-          onBust={(id) => markBusted(activeSession.id, id)}
-          onRemove={(id) => {
-            if (confirmHostPin(activeSession, 'remove this player')) {
-              removePlayer(activeSession.id, id);
-            }
-          }}
-        />
-
-        <form className="add-player-form" onSubmit={handleAddPlayerSubmit}>
-          <input
-            type="text"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Player name"
-            required
-          />
-          <button type="submit" className="btn btn-secondary">
-            + Add Player
-          </button>
-        </form>
-      </Card>
-
-      <JoinCodeCard joinCode={activeSession.joinCode} />
-
-      {activeSession.notes && (
-        <Card title="Notes">
-          <p className="session-notes">{activeSession.notes}</p>
-        </Card>
-      )}
-
-      <Card>
-        <div className="close-session">
-          {!showCloseConfirm ? (
-            <button className="btn btn-danger" onClick={() => setShowCloseConfirm(true)}>
-              End Session
-            </button>
-          ) : (
-            <div className="close-confirm">
-              <p>End this session? Make sure all players are cashed out.</p>
-              <div className="modal-actions">
-                <button className="btn btn-ghost" onClick={() => setShowCloseConfirm(false)}>
-                  Cancel
-                </button>
-                <button className="btn btn-danger" onClick={handleClose}>
-                  Confirm End Session
-                </button>
-              </div>
+      <div className="session-grid">
+        <div className="session-main">
+          {(summary.biggestWinner || summary.biggestLoser) && (
+            <div className="results-highlight">
+              {summary.biggestWinner && (
+                <span className="profit">
+                  Top: {summary.biggestWinner.name} (
+                  {formatCurrency(summary.biggestWinner.profit, activeSession.currency)})
+                </span>
+              )}
+              {summary.biggestLoser && (
+                <span className="loss">
+                  Bottom: {summary.biggestLoser.name} (
+                  {formatCurrency(summary.biggestLoser.loss, activeSession.currency)})
+                </span>
+              )}
             </div>
           )}
+
+          <Card title="Players">
+            <PlayerTable
+              session={activeSession}
+              onAddBuyIn={(id, cash) => addBuyIn(activeSession.id, id, cash)}
+              onUpdateStack={(id, chips) => updatePlayerStack(activeSession.id, id, chips)}
+              onCashOut={(id, chips) => cashOutPlayer(activeSession.id, id, chips)}
+              onBust={(id) => markBusted(activeSession.id, id)}
+              onRemove={(id) => {
+                if (confirmHostPin(activeSession, 'remove this player')) {
+                  removePlayer(activeSession.id, id);
+                }
+              }}
+            />
+
+            <form className="add-player-form" onSubmit={handleAddPlayerSubmit}>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Player name"
+                required
+              />
+              <button type="submit" className="btn btn-secondary">
+                + Add Player
+              </button>
+            </form>
+          </Card>
         </div>
-      </Card>
+
+        <aside className="session-side">
+          <JoinCodeCard joinCode={activeSession.joinCode} />
+
+          {activeSession.blindPlan && (
+            <BlindPlanDisplay blindPlan={activeSession.blindPlan} collapsible />
+          )}
+
+          {activeSession.notes && (
+            <Card title="Notes">
+              <p className="session-notes">{activeSession.notes}</p>
+            </Card>
+          )}
+
+          <Card title="Session">
+            <div className="session-side-actions">
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={() => exportSessionCSV(activeSession)}
+              >
+                Export CSV
+              </button>
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={() => exportSessionPDF(activeSession)}
+              >
+                Export PDF
+              </button>
+              {!showCloseConfirm ? (
+                <button
+                  className="btn btn-danger btn-block"
+                  onClick={() => setShowCloseConfirm(true)}
+                >
+                  End Session
+                </button>
+              ) : (
+                <div className="close-confirm">
+                  <p>End this session? Make sure all players are cashed out.</p>
+                  <div className="modal-actions">
+                    <button className="btn btn-ghost" onClick={() => setShowCloseConfirm(false)}>
+                      Cancel
+                    </button>
+                    <button className="btn btn-danger" onClick={handleClose}>
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        </aside>
+      </div>
 
       {showAddPlayerModal && (
         <BuyInModal

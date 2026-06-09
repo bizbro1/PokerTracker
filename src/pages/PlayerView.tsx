@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/Card';
-import { CurrentBlindsBar } from '../components/CurrentBlindsBar';
+import { SessionStatStrip } from '../components/SessionStatStrip';
 import { StackUpdateModal } from '../components/StackUpdateModal';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
@@ -106,13 +106,56 @@ export function PlayerView() {
         </button>
       </div>
 
-      <CurrentBlindsBar session={session} />
+      <SessionStatStrip session={session} />
 
       <Card title="My Stats" className="player-self-card">
         <div className="player-self-header">
           <StatusBadge status={player.status} />
           {session.status === 'closed' && <span className="badge">Session ended</span>}
         </div>
+
+        {isPlaying && (
+          <div className="player-self-hero">
+            <span className="player-self-hero-label">My Stack</span>
+            <span className="player-self-hero-value">
+              {player.currentStackChips !== null
+                ? formatChips(player.currentStackChips)
+                : '—'}
+            </span>
+            {stackCash !== null && (
+              <span className="player-self-hero-sub">
+                = {formatCurrency(stackCash, session.currency)}
+              </span>
+            )}
+            {liveProfit !== null && (
+              <span className={`player-self-hero-pl ${liveProfit >= 0 ? 'profit' : 'loss'}`}>
+                {formatProfitLoss(liveProfit, session.currency)}
+                {liveProfitChips !== null && (
+                  <span className="chip-pl"> ({formatChipProfitLoss(liveProfitChips)})</span>
+                )}
+              </span>
+            )}
+            {player.currentStackChips === null && (
+              <span className="player-self-hero-sub">tap below to count your chips</span>
+            )}
+          </div>
+        )}
+
+        {!isPlaying && finalProfit !== null && (
+          <div className="player-self-hero">
+            <span className="player-self-hero-label">My Result</span>
+            <span
+              className={`player-self-hero-value ${finalProfit >= 0 ? 'profit' : 'loss'}`}
+            >
+              {formatProfitLoss(finalProfit, session.currency)}
+            </span>
+            {finalProfitChips !== null && (
+              <span className="player-self-hero-sub">
+                {formatChipProfitLoss(finalProfitChips)} chips
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="player-self-grid">
           <div className="player-self-stat">
@@ -128,55 +171,11 @@ export function PlayerView() {
             <span className="player-self-value">{formatChips(chipsReceived)}</span>
           </div>
 
-          {isPlaying && (
-            <div className="player-self-stat">
-              <span className="player-self-label">Current stack</span>
-              <span className="player-self-value">
-                {player.currentStackChips !== null
-                  ? `${formatChips(player.currentStackChips)} chips`
-                  : '—'}
-              </span>
-            </div>
-          )}
-
-          {isPlaying && stackCash !== null && (
-            <div className="player-self-stat">
-              <span className="player-self-label">Stack value</span>
-              <span className="player-self-value">
-                {formatCurrency(stackCash, session.currency)}
-              </span>
-            </div>
-          )}
-
-          {isPlaying && liveProfit !== null && (
-            <div className="player-self-stat">
-              <span className="player-self-label">Live P/L</span>
-              <span className={`player-self-value ${liveProfit >= 0 ? 'profit' : 'loss'}`}>
-                {formatProfitLoss(liveProfit, session.currency)}
-                {liveProfitChips !== null && (
-                  <span className="chip-pl"> ({formatChipProfitLoss(liveProfitChips)})</span>
-                )}
-              </span>
-            </div>
-          )}
-
           {finalCashOut !== null && (
             <div className="player-self-stat">
               <span className="player-self-label">Cashed out</span>
               <span className="player-self-value">
                 {formatCurrency(finalCashOut, session.currency)}
-              </span>
-            </div>
-          )}
-
-          {finalProfit !== null && (
-            <div className="player-self-stat">
-              <span className="player-self-label">Result</span>
-              <span className={`player-self-value ${finalProfit >= 0 ? 'profit' : 'loss'}`}>
-                {formatProfitLoss(finalProfit, session.currency)}
-                {finalProfitChips !== null && (
-                  <span className="chip-pl"> ({formatChipProfitLoss(finalProfitChips)})</span>
-                )}
               </span>
             </div>
           )}

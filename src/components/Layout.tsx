@@ -8,6 +8,24 @@ const navItems = [
   { to: '/hands', label: 'Hands', icon: '♤' },
 ];
 
+function NavLinks({ className }: { className: string }) {
+  return (
+    <>
+      {navItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          className={({ isActive }) => `${className} ${isActive ? 'active' : ''}`}
+          end={item.to === '/'}
+        >
+          <span className="nav-icon">{item.icon}</span>
+          <span className="nav-label">{item.label}</span>
+        </NavLink>
+      ))}
+    </>
+  );
+}
+
 export function Layout() {
   return (
     <div className="app">
@@ -17,24 +35,17 @@ export function Layout() {
             <span className="logo-icon">♠</span>
             <span>Poker Night</span>
           </NavLink>
-          <nav className="nav">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                end={item.to === '/'}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
-              </NavLink>
-            ))}
+          <nav className="nav nav-top">
+            <NavLinks className="nav-link" />
           </nav>
         </div>
       </header>
       <main className="main">
         <Outlet />
       </main>
+      <nav className="bottom-nav">
+        <NavLinks className="bottom-nav-link" />
+      </nav>
     </div>
   );
 }
