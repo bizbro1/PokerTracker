@@ -1,4 +1,5 @@
 let audioContext: AudioContext | null = null;
+let levelUpAudio: HTMLAudioElement | null = null;
 
 function getContext(): AudioContext {
   if (!audioContext) {
@@ -7,7 +8,7 @@ function getContext(): AudioContext {
   return audioContext;
 }
 
-export function playBlindLevelUpSound(): void {
+function playFallbackChime(): void {
   try {
     const ctx = getContext();
     const now = ctx.currentTime;
@@ -31,5 +32,18 @@ export function playBlindLevelUpSound(): void {
     osc.stop(now + 0.5);
   } catch {
     // Audio may be blocked until user interaction
+  }
+}
+
+export function playBlindLevelUpSound(): void {
+  try {
+    if (!levelUpAudio) {
+      levelUpAudio = new Audio('/blinds-up.mp3');
+      levelUpAudio.preload = 'auto';
+    }
+    levelUpAudio.currentTime = 0;
+    void levelUpAudio.play().catch(() => playFallbackChime());
+  } catch {
+    playFallbackChime();
   }
 }
