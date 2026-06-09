@@ -12,6 +12,7 @@ import { useWakeLock } from '../hooks/useWakeLock';
 import { getSessionSummary } from '../utils/calculations';
 import { exportSessionCSV, exportSessionPDF } from '../utils/export';
 import { formatCurrency } from '../utils/format';
+import { isHostDevice, markHostDevice } from '../utils/hostDevice';
 import { confirmHostPin } from '../utils/hostPin';
 
 export function ActiveSession() {
@@ -30,6 +31,7 @@ export function ActiveSession() {
   const [playerName, setPlayerName] = useState('');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [hostUnlocked, setHostUnlocked] = useState(false);
 
   // Keep the host screen awake during the live session (blind timer etc.)
   useWakeLock(!!activeSession);
@@ -46,6 +48,17 @@ export function ActiveSession() {
       </div>
     );
   }
+
+  // Host controls live on the device that created the session. Other devices
+  // can watch read-only, or unlock with the host PIN (when one is set).
+  const isHost =
+    !activeSession.hostPin || hostUnlocked || isHostDevice(activeSession.id);
+
+  const handleUnlockHost = () => {
+    if (!confirmHostPin(activeSession, 'unlock host controls')) return;
+    markHostDevice(activeSession.id);
+    setHostUnlocked(true);
+  };
 
   const summary = getSessionSummary(activeSession);
 
@@ -65,12 +78,20 @@ export function ActiveSession() {
     <div className="page page-wide">
       <div className="page-header">
         <h1>Live Session</h1>
+        {!isHost && (
+          <div className="page-actions">
+            <span className="spectator-badge">Spectator</span>
+            <button className="btn btn-sm btn-secondary" onClick={handleUnlockHost}>
+              I'm the host
+            </button>
+          </div>
+        )}
       </div>
 
       <SessionStatStrip
         session={activeSession}
-        onTogglePause={() => toggleBlindTimerPause(activeSession.id)}
-        showAccounting
+        onTogglePause={isHost ? () => toggleBlindTimerPause(activeSession.id) : undefined}
+        showAccounting={isHost}
       />
       <BalanceWarning session={activeSession} />
 
@@ -96,6 +117,7 @@ export function ActiveSession() {
           <Card title="Players">
             <PlayerTable
               session={activeSession}
+              readOnly={!isHost}
               onAddBuyIn={(id, cash) => addBuyIn(activeSession.id, id, cash)}
               onUpdateStack={(id, chips) => updatePlayerStack(activeSession.id, id, chips)}
               onCashOut={(id, chips) => cashOutPlayer(activeSession.id, id, chips)}
@@ -107,18 +129,20 @@ export function ActiveSession() {
               }}
             />
 
-            <form className="add-player-form" onSubmit={handleAddPlayerSubmit}>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Player name"
-                required
-              />
-              <button type="submit" className="btn btn-secondary">
-                + Add Player
-              </button>
-            </form>
+            {isHost && (
+              <form className="add-player-form" onSubmit={handleAddPlayerSubmit}>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="Player name"
+                  required
+                />
+                <button type="submit" className="btn btn-secondary">
+                  + Add Player
+                </button>
+              </form>
+            )}
           </Card>
         </div>
 
@@ -135,6 +159,7 @@ export function ActiveSession() {
             </Card>
           )}
 
+          {isHost ? (
           <Card title="Session">
             <div className="session-side-actions">
               <button
@@ -171,6 +196,15 @@ export function ActiveSession() {
               )}
             </div>
           </Card>
+          ) : (
+            <Card title="Session">
+              <p className="form-hint">
+                You're watching as a spectator. Buy-ins, cash-outs, and busts are managed on
+                the host's device. If this is your device, tap "I'm the host" above and enter
+                the host PIN.
+              </p>
+            </Card>
+          )}
         </aside>
       </div>
 

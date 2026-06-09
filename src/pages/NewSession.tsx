@@ -7,6 +7,7 @@ import type { BlindPlanConfig } from '../types';
 import { cashToChips } from '../utils/calculations';
 import { blindPlanToSummaryString, computeBlindPlan } from '../utils/blindPlan';
 import { formatChips, formatCurrency } from '../utils/format';
+import { markHostDevice } from '../utils/hostDevice';
 
 const CURRENCIES = ['NOK', 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SEK', 'DKK'];
 
@@ -50,7 +51,7 @@ export function NewSession() {
 
     const plan = blindCalcEnabled ? computeBlindPlan(blindConfig) : null;
 
-    createSession({
+    const session = createSession({
       chipValue: { cash: cashNum, chips: chipsNum },
       defaultBuyInCash: isNaN(defaultNum) || defaultNum <= 0 ? cashNum : defaultNum,
       currency,
@@ -60,6 +61,7 @@ export function NewSession() {
       notes: notes.trim(),
       hostPin: hostPin.trim() || null,
     });
+    markHostDevice(session.id);
     navigate('/session');
   };
 
@@ -187,7 +189,8 @@ export function NewSession() {
               autoComplete="off"
             />
             <span className="field-hint">
-              If set, ending the session, removing players, and deleting require this PIN.
+              Recommended! With a PIN, only your device controls the game — friends opening
+              the live session on their phones can watch but not bust or cash out players.
             </span>
           </label>
 
