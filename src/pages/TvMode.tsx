@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSessions } from '../hooks/useSessions';
+import { useStackUpdateSound } from '../hooks/useStackUpdateSound';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getCurrentBlindLevel, getLevelStartMinutes } from '../utils/blindStructure';
 import { getEffectiveBlindElapsedMs, isBlindTimerPaused } from '../utils/blindTimer';
@@ -68,6 +69,7 @@ export function TvMode() {
   const [sceneIdx, setSceneIdx] = useState(0);
 
   useWakeLock(true);
+  useStackUpdateSound(activeSession);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 500);

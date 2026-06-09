@@ -8,6 +8,7 @@ import { JoinCodeCard } from '../components/JoinCodeCard';
 import { PlayerTable } from '../components/PlayerTable';
 import { SessionStatStrip } from '../components/SessionStatStrip';
 import { useSessions } from '../hooks/useSessions';
+import { useStackUpdateSound } from '../hooks/useStackUpdateSound';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { getSessionSummary } from '../utils/calculations';
 import { exportSessionCSV, exportSessionPDF } from '../utils/export';
@@ -35,6 +36,7 @@ export function ActiveSession() {
 
   // Keep the host screen awake during the live session (blind timer etc.)
   useWakeLock(!!activeSession);
+  useStackUpdateSound(activeSession);
 
   if (!activeSession) {
     return (

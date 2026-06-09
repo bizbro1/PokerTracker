@@ -1,5 +1,5 @@
 let audioContext: AudioContext | null = null;
-let levelUpAudio: HTMLAudioElement | null = null;
+const audioCache = new Map<string, HTMLAudioElement>();
 
 function getContext(): AudioContext {
   if (!audioContext) {
@@ -35,15 +35,25 @@ function playFallbackChime(): void {
   }
 }
 
-export function playBlindLevelUpSound(): void {
+function playClip(src: string, fallback?: () => void): void {
   try {
-    if (!levelUpAudio) {
-      levelUpAudio = new Audio('/blinds-up.mp3');
-      levelUpAudio.preload = 'auto';
+    let audio = audioCache.get(src);
+    if (!audio) {
+      audio = new Audio(src);
+      audio.preload = 'auto';
+      audioCache.set(src, audio);
     }
-    levelUpAudio.currentTime = 0;
-    void levelUpAudio.play().catch(() => playFallbackChime());
+    audio.currentTime = 0;
+    void audio.play().catch(() => fallback?.());
   } catch {
-    playFallbackChime();
+    fallback?.();
   }
+}
+
+export function playBlindLevelUpSound(): void {
+  playClip('/blinds-up.mp3', playFallbackChime);
+}
+
+export function playStackUpdateSound(): void {
+  playClip('/stack-update.mp3');
 }
