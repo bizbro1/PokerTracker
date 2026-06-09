@@ -2126,6 +2126,217 @@ textarea {
   font-size: 1rem;
 }
 
+/* ===== TV mode (fullscreen tournament clock) ===== */
+
+.tv {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  background:
+    radial-gradient(ellipse 100% 70% at 50% -15%, rgba(34, 84, 56, 0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 80% 50% at 50% 115%, rgba(226, 177, 77, 0.07) 0%, transparent 60%),
+    var(--bg);
+  user-select: none;
+  overflow: hidden;
+}
+
+.tv-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tv-brand {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  font-weight: 800;
+  color: var(--gold);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.tv-brand:hover {
+  text-decoration: none;
+  color: var(--gold-bright);
+}
+
+.tv-top-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tv-pot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.tv-pot-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.tv-pot-value {
+  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.tv-icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+
+.tv-icon-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tv-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.5rem, 1.5vh, 1.25rem);
+  min-height: 0;
+}
+
+.tv-level-tag {
+  font-size: clamp(0.85rem, 1.8vw, 1.15rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+}
+
+.tv-level-total {
+  color: var(--border-strong);
+}
+
+.tv-blinds {
+  font-size: clamp(4rem, 17vw, 12rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--gold-bright);
+  text-shadow: 0 4px 50px rgba(226, 177, 77, 0.35);
+  white-space: nowrap;
+}
+
+.tv-blinds-sep {
+  color: var(--gold-dim);
+  margin: 0 0.12em;
+}
+
+.tv-clock {
+  font-size: clamp(2.2rem, 8vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.tv-clock-final {
+  color: var(--text-muted);
+}
+
+.tv-paused .tv-clock {
+  color: var(--gold);
+  animation: tv-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tv-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tv-progress {
+  width: min(680px, 82vw);
+  height: 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.tv-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim) 0%, var(--gold-bright) 100%);
+  border-radius: 999px;
+  transition: width 0.5s linear;
+}
+
+.tv-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(1.5rem, 5vw, 4rem);
+  flex-wrap: wrap;
+}
+
+.tv-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.tv-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.tv-stat-value {
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tv-stat-dim {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.tv-stat-gold {
+  color: var(--gold);
+  letter-spacing: 0.18em;
+}
+
+.tv-pause-btn {
+  align-self: center;
+}
+
+.tv-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tv-empty-icon {
+  font-size: 3.5rem;
+  color: var(--gold-dim);
+}
+
 .spectator-badge {
   display: inline-flex;
   align-items: center;

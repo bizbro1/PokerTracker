@@ -9,11 +9,13 @@ import { NewSession } from './pages/NewSession';
 import { PlayerStatsPage } from './pages/PlayerStatsPage';
 import { PlayerView } from './pages/PlayerView';
 import { SessionDetail } from './pages/SessionDetail';
+import { TvMode } from './pages/TvMode';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="tv" element={<TvMode />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="new" element={<NewSession />} />

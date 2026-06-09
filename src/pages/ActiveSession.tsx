@@ -162,6 +162,14 @@ export function ActiveSession() {
           {isHost ? (
           <Card title="Session">
             <div className="session-side-actions">
+              <a
+                href="/tv"
+                target="_blank"
+                rel="noopener"
+                className="btn btn-secondary btn-block"
+              >
+                📺 Open TV Display
+              </a>
               <button
                 className="btn btn-ghost btn-block"
                 onClick={() => exportSessionCSV(activeSession)}
