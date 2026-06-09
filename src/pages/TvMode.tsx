@@ -153,7 +153,8 @@ export function TvMode() {
       </div>
 
       <div className="tv-body">
-        <div className="tv-center">
+        <div className="tv-main">
+          <div className="tv-center">
           {current ? (
             <>
               <span className="tv-level-tag">
@@ -183,6 +184,37 @@ export function TvMode() {
               <div className="tv-clock">{formatDuration(elapsedMs)}</div>
             </>
           )}
+          </div>
+
+          <div className="tv-bottom">
+            <div className="tv-stat">
+              <span className="tv-stat-label">Duration</span>
+              <span className="tv-stat-value">{formatDuration(elapsedMs)}</span>
+            </div>
+            {next && (
+              <div className="tv-stat">
+                <span className="tv-stat-label">Next Blinds</span>
+                <span className="tv-stat-value">
+                  {formatChips(next.smallBlind)} / {formatChips(next.bigBlind)}
+                </span>
+              </div>
+            )}
+            {session.joinCode && (
+              <div className="tv-stat">
+                <span className="tv-stat-label">Join Code</span>
+                <span className="tv-stat-value tv-stat-gold">{session.joinCode}</span>
+              </div>
+            )}
+            {isHost && plan && (
+              <button
+                type="button"
+                className={`btn ${paused ? 'btn-primary' : 'btn-ghost'} tv-pause-btn`}
+                onClick={() => toggleBlindTimerPause(session.id)}
+              >
+                {paused ? '▶ Resume' : '⏸ Pause'}
+              </button>
+            )}
+          </div>
         </div>
 
         {session.players.length > 0 && (
@@ -218,36 +250,6 @@ export function TvMode() {
               ))}
             </div>
           </aside>
-        )}
-      </div>
-
-      <div className="tv-bottom">
-        <div className="tv-stat">
-          <span className="tv-stat-label">Duration</span>
-          <span className="tv-stat-value">{formatDuration(elapsedMs)}</span>
-        </div>
-        {next && (
-          <div className="tv-stat">
-            <span className="tv-stat-label">Next Blinds</span>
-            <span className="tv-stat-value">
-              {formatChips(next.smallBlind)} / {formatChips(next.bigBlind)}
-            </span>
-          </div>
-        )}
-        {session.joinCode && (
-          <div className="tv-stat">
-            <span className="tv-stat-label">Join Code</span>
-            <span className="tv-stat-value tv-stat-gold">{session.joinCode}</span>
-          </div>
-        )}
-        {isHost && plan && (
-          <button
-            type="button"
-            className={`btn ${paused ? 'btn-primary' : 'btn-ghost'} tv-pause-btn`}
-            onClick={() => toggleBlindTimerPause(session.id)}
-          >
-            {paused ? '▶ Resume' : '⏸ Pause'}
-          </button>
         )}
       </div>
     </div>
